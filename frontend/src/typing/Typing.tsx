@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import ReactTooltip from 'react-tooltip'
 
 const SAMPLE_EN = `The quick brown fox jumps over the lazy dog.`
 const SAMPLE_KO = `빠른 갈색 여우가 게으른 개를 뛰어넘습니다.`
@@ -16,6 +17,8 @@ export default function Typing(){
   const { user, token } = React.useContext<any>(require('../auth/AuthContext').AuthContext)
 
   useEffect(()=>{ inputRef.current?.focus() }, [])
+
+  useEffect(()=>{ fetchLessons().then(l=>{ setLessons(l); if(l.length>0) setSelectedLesson(l[0].id) }) }, [])
 
   useEffect(()=>{
     setText(lang === 'en' ? SAMPLE_EN : SAMPLE_KO)
@@ -61,7 +64,7 @@ export default function Typing(){
       const typed = inputChars[idx]
       const cls = typed == null ? 'char upcoming' : (typed === ch ? 'char correct' : 'char wrong')
       const isCaret = idx === caretIndex
-      return <span key={idx} className={`${cls} ${isCaret? 'caret':''}`}>{ch}</span>
+      return <span key={idx} className={`${cls} ${isCaret? 'caret':''}`} data-tip={typed !== ch && typed!=null ? `Expected: ${ch}` : ''}>{ch}</span>
     })
   }
 
@@ -86,6 +89,8 @@ export default function Typing(){
   const [recState, setRecState] = useState<'idle'|'recording'|'uploaded'>('idle')
   const [recBlob, setRecBlob] = useState<Blob | null>(null)
   const mediaRef = useRef<MediaRecorder | null>(null)
+  const [lessons, setLessons] = useState<any[]>([])
+  const [selectedLesson, setSelectedLesson] = useState<string | null>(null)
 
   async function startRecord(){
     if(!token){ alert('Login required'); window.location.hash='#login'; return }
@@ -142,15 +147,28 @@ export default function Typing(){
         <div className="page left">
           <div className="page-inner">
             <div className="page-header">Source</div>
-            <div className="page-body">{text}</div>
+            <div className="page-body">
+              <div style={{marginBottom:12}}>
+                <label>Lesson: </label>
+                <select value={selectedLesson || ''} onChange={e=>{
+                  const id = e.target.value; setSelectedLesson(id); const l = lessons.find(x=>x.id===id); if(l) { setText(l.content); setLang(l.language); reset(true) }
+                }}>
+                  {lessons.map(ls => <option key={ls.id} value={ls.id}>{ls.title} ({ls.language})</option>)}
+                </select>
+              </div>
+              {text}
+            </div>
           </div>
         </div>
         <div className="page right">
           <div className="page-inner">
             <div className="page-header">Type here</div>
             <div className="page-body type-area">
-              <div className="rendered-text">{renderText()}</div>
-              <input ref={inputRef} value={input} onChange={handleChange} onKeyDown={handleKeyDown} className="typing-input" placeholder="Start typing..." />
+                    <div className="rendered-text">{renderText()}</div>
+              <input ref={inputRef} value={input} onChange={handleChange} onKeyDown={handleKeyDown} className="typing-input" placeholder="Start typing..." aria-label="typing-input" />
+              <div style={{marginTop:8}}>
+                <small style={{color:'#6b7280'}}>Tip: Use Backspace to correct errors. Wrong characters show the expected character on hover.</small>
+              </div>
             </div>
           </div>
         </div>

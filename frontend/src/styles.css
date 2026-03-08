@@ -1,13 +1,22 @@
 /* existing content above... */
 
-/* caret style */
+/* caret animation: blinking bar under current char */
+@keyframes blinkBar{
+  0%{ opacity:1 }
+  50%{ opacity:0 }
+  100%{ opacity:1 }
+}
 .char.caret{ position:relative }
-.char.caret::after{ content:''; position:absolute; left:0; right:0; height:2px; bottom:-2px; background:linear-gradient(90deg,#06b6d4,#7c3aed); border-radius:2px }
+.char.caret::after{ content:''; position:absolute; left:2px; right:2px; height:3px; bottom:-4px; background:linear-gradient(90deg,#06b6d4,#7c3aed); border-radius:2px; animation: blinkBar 1s steps(1,end) infinite }
 
 /* rendered text container */
-.rendered-text{ min-height:48px; padding:8px 6px; border-radius:6px; background:linear-gradient(180deg,#ffffff,#fbfcff); margin-bottom:8px }
+.rendered-text{ min-height:56px; padding:10px 8px; border-radius:6px; background:linear-gradient(180deg,#ffffff,#fbfcff); margin-bottom:8px; font-size:18px }
 
 /* improve typography */
 body{ font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
 .page-body{ font-size:18px; letter-spacing:0.2px }
 .typing-input{ opacity:0; height:20px }
+
+/* tooltip custom */
+.react-tooltip{ opacity:0.98 }
+.react-tooltip.place-top.type-dark{ background: rgba(17,24,39,0.95); color: #fff }
