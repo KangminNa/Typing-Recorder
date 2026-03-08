@@ -12,7 +12,7 @@ export default function Typing(){
   const [errors, setErrors] = useState(0)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
-  const { user, token } = (window as any).__auth || { user:null, token:null }
+  const { user, token } = React.useContext<any>(require('../auth/AuthContext').AuthContext)
 
   useEffect(()=>{ inputRef.current?.focus() }, [])
 
@@ -34,6 +34,17 @@ export default function Typing(){
     setErrors(err)
     setInput(v)
     if(v === text) setFinished(true)
+  }
+
+  // render text with per-character coloring
+  function renderText(){
+    const chars = text.split('')
+    const inputChars = input.split('')
+    return chars.map((ch, idx)=>{
+      const typed = inputChars[idx]
+      const cls = typed == null ? 'char upcoming' : (typed === ch ? 'char correct' : 'char wrong')
+      return <span key={idx} className={cls}>{ch}</span>
+    })
   }
 
   // Recording state
