@@ -15,4 +15,8 @@ export class RecordingsService {
   async list(limit = 50){
     return this.repo.find({ take: limit, order: { createdAt: 'DESC' } })
   }
+
+  async find(id:string){
+    return this.repo.findOne({ where: { id } })
+  }
 }
