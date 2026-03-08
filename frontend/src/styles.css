@@ -1,0 +1,7 @@
+body{ font-family: system-ui, Arial, sans-serif; padding:20px; background:#f5f7fb }
+.container{ max-width:800px; margin:0 auto }
+.card{ background:white; padding:12px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.06) }
+.text-box{ padding:12px; border:1px solid #eee; min-height:60px; margin-bottom:8px; white-space:pre-wrap }
+.typing-input{ width:100%; padding:8px; font-size:16px }
+.stats{ display:flex; gap:16px; margin-top:8px }
+button{ padding:8px 12px }
