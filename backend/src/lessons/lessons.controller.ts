@@ -21,8 +21,8 @@ export class LessonsController {
   // admin
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Body() body:any, @Param() params:any, @Param('') p:any){
-    // simple admin check
+  async create(@Req() req:any, @Body() body:any){
+    if(!req.user || req.user.role !== 'admin') throw new HttpException('Forbidden',403)
     if(!body) throw new HttpException('Invalid',400)
     const lesson = await this.svc.create(body)
     return { success:true, lesson }
@@ -30,14 +30,16 @@ export class LessonsController {
 
   @UseGuards(JwtAuthGuard)
   @Put(':id')
-  async update(@Param('id') id:string, @Body() body:any){
+  async update(@Req() req:any, @Param('id') id:string, @Body() body:any){
+    if(!req.user || req.user.role !== 'admin') throw new HttpException('Forbidden',403)
     const updated = await this.svc.update(id, body)
     return { success:true, updated }
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async del(@Param('id') id:string){
+  async del(@Req() req:any, @Param('id') id:string){
+    if(!req.user || req.user.role !== 'admin') throw new HttpException('Forbidden',403)
     await this.svc.remove(id)
     return { success:true }
   }

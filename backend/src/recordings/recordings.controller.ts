@@ -15,6 +15,7 @@ export class RecordingsController {
     const userId = req.user.sub;
     const lessonId = body.lessonId || null;
     const durationMs = Number(body.durationMs) || 0;
+    if(!file || !file.buffer) throw new BadRequestException('No file')
     const rec = await this.svc.save({ userId, lessonId, data: file.buffer, durationMs });
     return { success:true, id: rec.id }
   }
