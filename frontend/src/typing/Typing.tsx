@@ -11,6 +11,7 @@ export default function Typing(){
   const [finished, setFinished] = useState(false)
   const [errors, setErrors] = useState(0)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const [caretIndex, setCaretIndex] = useState(0)
 
   const { user, token } = React.useContext<any>(require('../auth/AuthContext').AuthContext)
 
@@ -23,17 +24,33 @@ export default function Typing(){
 
   function reset(clearInput = true){
     if(clearInput) setInput('')
-    setStartAt(null); setFinished(false); setErrors(0)
+    setStartAt(null); setFinished(false); setErrors(0); setCaretIndex(0)
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>){
     const v = e.target.value
     if(!startAt && v.length>0) setStartAt(Date.now())
+    // update caret index
+    setCaretIndex(v.length)
+    // recalc errors only for current typed portion
     let err = 0
     for(let i=0;i<v.length;i++) if(v[i] !== text[i]) err++
     setErrors(err)
     setInput(v)
     if(v === text) setFinished(true)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>){
+    // allow user to correct mistakes with backspace; update caret accordingly
+    if(e.key === 'Backspace'){
+      setTimeout(()=>{
+        const v = inputRef.current?.value || ''
+        setCaretIndex(v.length)
+        let err = 0
+        for(let i=0;i<v.length;i++) if(v[i] !== text[i]) err++
+        setErrors(err)
+      }, 0)
+    }
   }
 
   // render text with per-character coloring
@@ -43,8 +60,26 @@ export default function Typing(){
     return chars.map((ch, idx)=>{
       const typed = inputChars[idx]
       const cls = typed == null ? 'char upcoming' : (typed === ch ? 'char correct' : 'char wrong')
-      return <span key={idx} className={cls}>{ch}</span>
+      const isCaret = idx === caretIndex
+      return <span key={idx} className={`${cls} ${isCaret? 'caret':''}`}>{ch}</span>
     })
+  }
+
+  const elapsed = startAt ? (finished ? (Date.now()-startAt) : (Date.now()-startAt)) : 0
+  const minutes = Math.max(elapsed/1000/60, 1/60)
+  const wordsTyped = input.trim().split(/\s+/).filter(Boolean).length
+  const wpm = Math.round(wordsTyped / minutes)
+  const accuracy = input.length ? Math.round(((input.length - errors)/input.length)*100) : 100
+
+  async function submitScore(){
+    try{
+      await fetch('/api/typing/result', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', Authorization: token?`Bearer ${token}`:''},
+        body: JSON.stringify({ name: user?.name || 'Anonymous', wpm, accuracy, errors, durationMs: elapsed, text })
+      })
+      alert('Saved')
+    }catch(e){ console.error(e); alert('Save failed') }
   }
 
   // Recording state
@@ -58,6 +93,7 @@ export default function Typing(){
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mr = new MediaRecorder(stream)
       const chunks: any[] = []
+      const recStart = Date.now()
       mr.ondataavailable = (e)=> chunks.push(e.data)
       mr.onstop = async ()=>{
         const blob = new Blob(chunks, { type: 'audio/webm' })
@@ -66,7 +102,7 @@ export default function Typing(){
         // upload
         const fd = new FormData()
         fd.append('file', blob, 'rec.webm')
-        fd.append('durationMs', String(Date.now() - (startAt||Date.now())))
+        fd.append('durationMs', String(Date.now() - recStart))
         fd.append('lessonId', '')
         const res = await fetch('/api/recordings', { method:'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
         const j = await res.json(); if(j && j.success) alert('Uploaded')
@@ -84,25 +120,9 @@ export default function Typing(){
     setRecState('idle')
   }
 
-  const elapsed = startAt ? (finished ? (Date.now()-startAt) : (Date.now()-startAt)) : 0
-  const minutes = Math.max(elapsed/1000/60, 1/60)
-  const wordsTyped = input.trim().split(/\s+/).filter(Boolean).length
-  const wpm = Math.round(wordsTyped / minutes)
-  const accuracy = input.length ? Math.round(((input.length - errors)/input.length)*100) : 100
-
-  async function submitScore(){
-    try{
-      await fetch('/api/typing/result', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ name: 'Anonymous', wpm, accuracy, errors, durationMs: elapsed, text })
-      })
-      alert('Saved')
-    }catch(e){ console.error(e); alert('Save failed') }
-  }
-
   return (
-    <div className="typing-container">
+    <div>
+      <div className="typing-container">
       <div className="floating-bar">
         <div className="lang-group">
           <label className={`lang-btn ${lang==='en'?'active':''}`} onClick={()=>setLang('en')}>EN</label>
@@ -129,7 +149,8 @@ export default function Typing(){
           <div className="page-inner">
             <div className="page-header">Type here</div>
             <div className="page-body type-area">
-              <input ref={inputRef} value={input} onChange={handleChange} className="typing-input" placeholder="Start typing..." />
+              <div className="rendered-text">{renderText()}</div>
+              <input ref={inputRef} value={input} onChange={handleChange} onKeyDown={handleKeyDown} className="typing-input" placeholder="Start typing..." />
             </div>
           </div>
         </div>
@@ -144,6 +165,7 @@ export default function Typing(){
           <button onClick={submitScore} className="primary">Save Score</button>
         </div>
       </div>
+    </div>
     </div>
   )
 }
