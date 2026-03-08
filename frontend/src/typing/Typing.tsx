@@ -64,7 +64,19 @@ export default function Typing(){
       const typed = inputChars[idx]
       const cls = typed == null ? 'char upcoming' : (typed === ch ? 'char correct' : 'char wrong')
       const isCaret = idx === caretIndex
-      return <span key={idx} className={`${cls} ${isCaret? 'caret':''}`} data-tip={typed !== ch && typed!=null ? `Expected: ${ch}` : ''}>{ch}</span>
+      return (
+        <span
+          key={idx}
+          className={`${cls} ${isCaret? 'caret':''}`}
+          data-tip={typed !== ch && typed!=null ? `Expected: ${ch}` : ''}
+          tabIndex={0}
+          onFocus={(e)=>{
+            // show tooltip on focus if available
+            try{ ReactTooltip.show(e.currentTarget) }catch(_){}
+          }}
+          onBlur={(e)=>{ try{ ReactTooltip.hide(e.currentTarget) }catch(_){} }}
+        >{ch}</span>
+      )
     })
   }
 
@@ -91,6 +103,7 @@ export default function Typing(){
   const mediaRef = useRef<MediaRecorder | null>(null)
   const [lessons, setLessons] = useState<any[]>([])
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
 
   async function startRecord(){
     if(!token){ alert('Login required'); window.location.hash='#login'; return }
@@ -103,14 +116,16 @@ export default function Typing(){
       mr.onstop = async ()=>{
         const blob = new Blob(chunks, { type: 'audio/webm' })
         setRecBlob(blob)
-        setRecState('uploaded')
-        // upload
-        const fd = new FormData()
-        fd.append('file', blob, 'rec.webm')
-        fd.append('durationMs', String(Date.now() - recStart))
-        fd.append('lessonId', '')
-        const res = await fetch('/api/recordings', { method:'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
-        const j = await res.json(); if(j && j.success) alert('Uploaded')
+        // upload with progress
+        setUploadProgress(0)
+        try{
+          // dynamic import to avoid circular
+          const { uploadRecording } = await import('./upload')
+          await uploadRecording(blob, Date.now()-recStart, selectedLesson, token, (p:number)=> setUploadProgress(p))
+          setRecState('uploaded')
+          setUploadProgress(null)
+          alert('Uploaded')
+        }catch(e){ console.error(e); setUploadProgress(null); alert('Upload failed') }
       }
       mediaRef.current = mr
       mr.start()
@@ -140,6 +155,13 @@ export default function Typing(){
             <button className="record" onClick={stopRecord}>■ Stop</button>
           )}
           <button className="ghost" onClick={()=>reset(true)}>Reset</button>
+        </div>
+        <div style={{width:200, marginLeft:12}}>
+          {uploadProgress!=null && (
+            <div style={{height:8, background:'#eef2ff', borderRadius:6, overflow:'hidden'}}>
+              <div style={{width:`${uploadProgress}%`, height:'100%', background:'linear-gradient(90deg,#06b6d4,#7c3aed)'}} />
+            </div>
+          )}
         </div>
       </div>
 

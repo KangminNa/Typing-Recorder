@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from 'react'
 import { AuthContext } from '../auth/AuthContext'
+import RecordingsList from '../recordings/RecordingsList'
 
 export default function Admin(){
   const { token } = useContext(AuthContext)
@@ -54,6 +55,10 @@ export default function Admin(){
           </div>
         </div>
       )}
+
+      <div style={{marginTop:20}}>
+        <RecordingsList />
+      </div>
     </div>
   )
 }
